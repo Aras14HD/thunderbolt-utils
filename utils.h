@@ -83,3 +83,6 @@ char** list_to_numbered_array(struct list_item *item);
 bool isnum(const char *arr);
 void free_list(struct list_item *head);
 bool is_link_nabs(const char *name);
+ssize_t read_line_from_file(char** line, size_t* len, char* path);
+int write_line_to_file(char* line, char* path);
+int count_files_in_dir_with(char* name, char* path);

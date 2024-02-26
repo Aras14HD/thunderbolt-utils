@@ -9,6 +9,7 @@
  * Copyright (C) 2023 Intel Corporation
  */
 
+#include <stddef.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
@@ -17,6 +18,7 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <ctype.h>
+#include <dirent.h>
 
 #include "utils.h"
 
@@ -492,4 +494,37 @@ bool is_link_nabs(const char *name)
 	}
 
 	return false;
+}
+
+ssize_t read_line_from_file(char** s, size_t* len, char* path) {
+	if (path == NULL || s == NULL || len == NULL) return -2;
+	FILE* fd = fopen(path, "r");
+	if (fd == NULL) return -3;
+	ssize_t ret = getline(s, len, fd);
+	fclose(fd);
+	return ret;
+}
+
+int write_line_to_file(char* s, char* path) {
+	if (path == NULL || s == NULL) return -2;
+	FILE* fd = fopen(path, "w");
+	if (fd == NULL) return -3;
+	int ret = fputs(s, fd);
+	fclose(fd);
+	return ret;
+}
+
+int count_files_in_dir_with(char* name, char* path) {
+	if (name == NULL || path == NULL) return -1;
+	DIR* dp = opendir(path);
+	if (dp == NULL) return -2;
+	int i = 0;
+	struct dirent* dir = readdir(dp);
+	while (dir != NULL) {
+		if (strstr(dir->d_name, name) != NULL) i++;
+		dir = readdir(dp);
+	}
+	closedir(dp);
+	free(dir);
+	return i;
 }
