@@ -21,36 +21,26 @@ char *pci_dev_sysfs_path = "/sys/bus/pci/devices/";
 /* Perform a PCI rescan */
 void do_pci_rescan(void)
 {
-	char *path = "echo 1 > /sys/bus/pci/rescan";
-	char *root_cmd, *bash_op;
-
 	if (is_link_nabs("/sys/bus/pci/rescan"))
 		exit(1);
 
-	root_cmd = switch_cmd_to_root(path);
-	bash_op = do_bash_cmd(root_cmd);
-
-	free(root_cmd);
-	free(bash_op);
+	write_line_to_file("1", "/sys/bus/pci/rescan");
+	
 }
 
 /* Remove the provided PCI device from the system */
 void remove_pci_dev(const char *pci_id)
 {
 	char path[MAX_LEN], check[MAX_LEN];
-	char *root_cmd, *bash_op;
 
 	snprintf(check, sizeof(check), "%s%s/remove", pci_dev_sysfs_path, pci_id);
 	if (is_link_nabs(check))
 		exit(1);
 
-	snprintf(path, sizeof(path), "echo 1 > %s%s/remove", pci_dev_sysfs_path,
+	snprintf(path, sizeof(path), "%s%s/remove", pci_dev_sysfs_path,
 		 pci_id);
-	root_cmd = switch_cmd_to_root(path);
-	bash_op = do_bash_cmd(root_cmd);
+	write_line_to_file("1", path);
 
-	free(root_cmd);
-	free(bash_op);
 }
 
 /* Get vendor and device IDs for the given PCI device */
@@ -106,12 +96,10 @@ u64 total_grp_modules(const char *pci_id)
 	char path[MAX_LEN];
 	u64 ret;
 
-	snprintf(path, sizeof(path), "for line in $(ls %s%s/iommu_group/devices); do echo $line; done",
+	snprintf(path, sizeof(path), "%s%s/iommu_group/devices",
 		 pci_dev_sysfs_path, pci_id);
 
-	list_modules = do_bash_cmd_list(path);
-	ret = get_total_list_items(list_modules);
+	ret = count_files_in_dir_with("", path);
 
-	free_list(list_modules);
 	return ret;
 }

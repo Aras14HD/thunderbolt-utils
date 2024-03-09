@@ -641,17 +641,18 @@ void dump_vdid(const char *router)
 {
 	char vid_path[MAX_LEN], did_path[MAX_LEN], vcheck[MAX_LEN], dcheck[MAX_LEN];
 	char *vid, *did;
+	size_t vid_len, did_len;
 
 	snprintf(vcheck, sizeof(vcheck), "%s%s/vendor", tbt_sysfs_path, router);
 	snprintf(dcheck, sizeof(dcheck), "%s%s/device", tbt_sysfs_path, router);
 	if (is_link_nabs(vcheck) || is_link_nabs(dcheck))
 		exit(1);
 
-	snprintf(vid_path, sizeof(vid_path), "cat %s%s/vendor", tbt_sysfs_path, router);
-	vid = do_bash_cmd(vid_path);
+	snprintf(vid_path, sizeof(vid_path), "%s%s/vendor", tbt_sysfs_path, router);
+	read_line_from_file(&vid, &vid_len, vid_path);
 
-	snprintf(did_path, sizeof(did_path), "cat %s%s/device", tbt_sysfs_path, router);
-	did = do_bash_cmd(did_path);
+	snprintf(did_path, sizeof(did_path), "%s%s/device", tbt_sysfs_path, router);
+	read_line_from_file(&did, &did_len, did_path);
 
 	printf("ID %04x:%04x ", strtouh(vid), strtouh(did));
 
@@ -665,14 +666,15 @@ void dump_generation(const char *router)
 	char gen[MAX_LEN], check[MAX_LEN];
 	u8 generation;
 	char *gen_str;
+	size_t gen_len;
 
 	snprintf(check, sizeof(check), "%s%s/generation", tbt_sysfs_path, router);
 	if (is_link_nabs(check))
 		exit(1);
 
-	snprintf(gen, sizeof(gen), "cat %s%s/generation", tbt_sysfs_path, router);
+	snprintf(gen, sizeof(gen), "%s%s/generation", tbt_sysfs_path, router);
 
-	gen_str = do_bash_cmd(gen);
+	read_line_from_file(&gen_str, &gen_len, gen);
 	generation = strtoud(gen_str);
 
 	switch(generation) {
@@ -700,13 +702,14 @@ void dump_nvm_version(const char *router)
 {
 	char path[MAX_LEN], check[MAX_LEN];
 	char *nvm;
+	size_t len;
 
 	snprintf(check, sizeof(check), "%s%s/nvm_version", tbt_sysfs_path, router);
 	if (is_link_nabs(check))
 		exit(1);
 
-	snprintf(path, sizeof(path), "cat %s%s/nvm_version", tbt_sysfs_path, router);
-	nvm = do_bash_cmd(path);
+	snprintf(path, sizeof(path), "%s%s/nvm_version", tbt_sysfs_path, router);
+	read_line_from_file(&nvm, &len, path);
 
 	printf("NVM %s, ", nvm);
 
@@ -719,6 +722,7 @@ void dump_lanes(const char *router)
 	char path[MAX_LEN], check[MAX_LEN];
 	char str[MAX_LEN];
 	char *lanes;
+	size_t len;
 
 	if (is_host_router(router)) {
 		sprintf(str, "%s", "");
@@ -729,8 +733,8 @@ void dump_lanes(const char *router)
 	if (is_link_nabs(check))
 		exit(1);
 
-	snprintf(path, sizeof(path), "cat %s%s/tx_lanes", tbt_sysfs_path, router);
-	lanes = do_bash_cmd(path);
+	snprintf(path, sizeof(path), "%s%s/tx_lanes", tbt_sysfs_path, router);
+	read_line_from_file(&lanes, &len, path);
 	printf("x%s", lanes);
 
 	free(lanes);
@@ -742,6 +746,7 @@ void dump_speed(const char *router)
 	char path[MAX_LEN], check[MAX_LEN];
 	char str[MAX_LEN];
 	char *speed_str;
+	size_t len;
 
 	if (is_host_router(router)) {
 		sprintf(str, "%s", "");
@@ -752,9 +757,9 @@ void dump_speed(const char *router)
 	if (is_link_nabs(check))
 		exit(1);
 
-	snprintf(path, sizeof(path), "cat %s%s/tx_speed", tbt_sysfs_path, router);
+	snprintf(path, sizeof(path), "%s%s/tx_speed", tbt_sysfs_path, router);
 
-	speed_str = do_bash_cmd(path);
+	read_line_from_file(&speed_str, &len, path);
 	printf("%s, ", speed_str);
 
 	free(speed_str);
@@ -765,15 +770,16 @@ void dump_auth_sts(const char *router)
 {
 	char path[MAX_LEN], check[MAX_LEN];
 	char *auth_str;
+	size_t len;
 	bool auth;
 
 	snprintf(check, sizeof(check), "%s%s/authorized", tbt_sysfs_path, router);
 	if (is_link_nabs(check))
 		exit(1);
 
-	snprintf(path, sizeof(path), "cat %s%s/authorized", tbt_sysfs_path, router);
+	snprintf(path, sizeof(path), "%s%s/authorized", tbt_sysfs_path, router);
 
-	auth_str = do_bash_cmd(path);
+	read_line_from_file(&auth_str, &len, path);
 	auth = strtoud(auth_str);
 	printf("Auth:%s\n", (auth == 1) ? "Yes" : "No");
 

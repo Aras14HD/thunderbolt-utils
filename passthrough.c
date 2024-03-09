@@ -30,70 +30,61 @@
 static void bind_vfio_module(const char *pci_id, const struct vdid *vdid)
 {
 	char drv_path[3 * MAX_LEN];
-	char *root_cmd, *bash_op;
 	char dev_path[MAX_LEN];
+	char dev_str[MAX_LEN]; //TODO: Remove snprintf
+	char drv_str[MAX_LEN]; //TODO: Remove snprintf
 	char check[MAX_LEN];
 
+	snprintf(dev_str, sizeof(dev_str), "%s", pci_id);
 	snprintf(check, sizeof(check), "%s%s/driver/unbind", pci_dev_sysfs_path, pci_id);
 	if (is_link_nabs(check))
 		exit(1);
 
-	snprintf(dev_path, sizeof(dev_path), "echo %s > %s%s/driver/unbind",
-		 pci_id, pci_dev_sysfs_path, pci_id);
-	root_cmd = switch_cmd_to_root(dev_path);
-	bash_op = do_bash_cmd(root_cmd);
-
-	free(root_cmd);
-	free(bash_op);
+	snprintf(dev_path, sizeof(dev_path), "%s%s/driver/unbind",
+		 pci_dev_sysfs_path, pci_id);
+	write_line_to_file(dev_str, dev_path);
 
 	memset(check, '\0', MAX_LEN);
+	snprintf(dev_str, sizeof(dev_str), "%s %s", vdid->vendor_id, vdid->device_id);
 	snprintf(check, sizeof(check), "%svfio-pci/new_id", pci_drv_sysfs_path);
 	if (is_link_nabs(check))
 		exit(1);
 
-	snprintf(drv_path, sizeof(drv_path), "echo '%s %s' > %svfio-pci/new_id",
-		 vdid->vendor_id, vdid->device_id, pci_drv_sysfs_path);
-	root_cmd = switch_cmd_to_root(drv_path);
-	bash_op = do_bash_cmd(root_cmd);
-
-	free(root_cmd);
-	free(bash_op);
+	snprintf(drv_path, sizeof(drv_path), "%svfio-pci/new_id",
+		 pci_drv_sysfs_path);
+	write_line_to_file(drv_str, drv_path);
 }
 
 /* Unbinds the VFIO module from the provided PCI device and removes it */
 static void unbind_vfio_module(const char *pci_id, const struct vdid *vdid)
 {
 	char drv_path[3 * MAX_LEN];
+	char drv_str[MAX_LEN];
 	char *root_cmd, *bash_op;
 	char dev_path[MAX_LEN];
+	char dev_str[MAX_LEN];
 	char check[MAX_LEN];
 
 	snprintf(check, sizeof(check), "%s%s/driver/unbind", pci_dev_sysfs_path, pci_id);
 	if (is_link_nabs(check))
 		exit(1);
 
-	snprintf(dev_path, sizeof(dev_path), "echo %s > %s%s/driver/unbind",
-		 pci_id, pci_dev_sysfs_path, pci_id);
-	root_cmd = switch_cmd_to_root(dev_path);
-	bash_op = do_bash_cmd(root_cmd);
-
-	free(root_cmd);
-	free(bash_op);
+	snprintf(dev_str, sizeof(dev_str), "%s", pci_id);
+	snprintf(dev_path, sizeof(dev_path), "%s%s/driver/unbind",
+		 pci_dev_sysfs_path, pci_id);
+	write_line_to_file(dev_str, dev_path);
 
 	memset(check, '\0', MAX_LEN);
+	snprintf(dev_str, sizeof(dev_str), "%s %s", vdid->vendor_id, vdid->device_id);
 	snprintf(check, sizeof(check), "%svfio-pci/remove_id", pci_drv_sysfs_path);
 	if (is_link_nabs(check))
 		exit(1);
 
-	snprintf(drv_path, sizeof(drv_path), "echo '%s %s' > %svfio-pci/remove_id",
-		 vdid->vendor_id, vdid->device_id, pci_drv_sysfs_path);
-	root_cmd = switch_cmd_to_root(drv_path);
-	bash_op = do_bash_cmd(root_cmd);
+	snprintf(drv_path, sizeof(drv_path), "%svfio-pci/remove_id",
+		 pci_drv_sysfs_path);
+	write_line_to_file(drv_str, drv_path);
 
 	remove_pci_dev(pci_id);
-
-	free(root_cmd);
-	free(bash_op);
 }
 
 /* Returns the IOMMU group number of the provided PCI device */
@@ -188,8 +179,8 @@ static u32 read_host_mem(const struct vfio_hlvl_params *params, u64 off)
  */
 void* wait_for_vfio_no_iommu(void* arg)
 {
-	char *cmd = "cat /sys/module/vfio/parameters/enable_unsafe_noiommu_mode";
 	char *result;
+	size_t len;
 
 	if (arg) {
 		fprintf(stderr, "inconsistencies detected... aborting!\n");
@@ -197,8 +188,8 @@ void* wait_for_vfio_no_iommu(void* arg)
 	}
 
 	while (1) {
-		result = do_bash_cmd(cmd);
-		if (result && (result[0] == 'Y')) {
+		read_line_from_file(&result, &len, "/sys/module/vfio/parameters/enable_unsafe_noiommu_mode");
+		if (result && len > 0 && (result[0] == 'Y')) {
 			fprintf(stderr, "no-IOMMU enabled VFIO detected... aborting!\n");
 			free(result);
 

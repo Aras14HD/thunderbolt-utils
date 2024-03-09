@@ -69,15 +69,16 @@ static void dump_retimer_nvm_version(const char *retimer)
 {
 	char path[MAX_LEN], check[MAX_LEN];
 	char *ver;
+	size_t len;
 
 	snprintf(check, sizeof(check), "%s%s/nvm_version", tbt_sysfs_path, retimer);
 	if (is_link_nabs(check))
 		exit(1);
 
-	snprintf(path, sizeof(path), "cat %s%s/nvm_version", tbt_sysfs_path,
+	snprintf(path, sizeof(path), "%s%s/nvm_version", tbt_sysfs_path,
 		 retimer);
 
-	ver = do_bash_cmd(path);
+	read_line_from_file(&ver, &len, path);
 	printf("NVM %s\n", ver);
 
 	free(ver);
@@ -89,6 +90,7 @@ static bool dump_retimer(const char *retimer)
 	char vid_path[MAX_LEN], did_path[MAX_LEN], vcheck[MAX_LEN], dcheck[MAX_LEN];
 	int pos, dot_pos;
 	char *vid, *did;
+	size_t vid_len, did_len;
 	u8 domain, port;
 	char *router;
 	char *str;
@@ -118,12 +120,11 @@ static bool dump_retimer(const char *retimer)
 	if (is_link_nabs(vcheck) || is_link_nabs(dcheck))
 		exit(1);
 
-	snprintf(vid_path, sizeof(vid_path), "cat %s%s/vendor", tbt_sysfs_path, retimer);
-	vid = do_bash_cmd(vid_path);
+	snprintf(vid_path, sizeof(vid_path), "%s%s/vendor", tbt_sysfs_path, retimer);
+	read_line_from_file(&vid, &vid_len, vid_path);
 
-	snprintf(did_path, sizeof(did_path), "cat %s%s/device", tbt_sysfs_path, retimer);
-	did = do_bash_cmd(did_path);
-
+	snprintf(did_path, sizeof(did_path), "%s%s/device", tbt_sysfs_path, retimer);
+	read_line_from_file(&did, &did_len, did_path);
 	printf("ID %04x:%04x ", strtouh(vid), strtouh(did));
 
 	dump_retimer_nvm_version(retimer);

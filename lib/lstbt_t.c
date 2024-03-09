@@ -68,17 +68,18 @@ static void dump_name(const char *router)
 {
 	char v_path[MAX_LEN], d_path[MAX_LEN], vcheck[MAX_LEN], dcheck[MAX_LEN];
 	char *vendor, *device;
+	size_t v_len, d_len;
 
 	snprintf(vcheck, sizeof(vcheck), "%s%s/vendor_name", tbt_sysfs_path, router);
 	snprintf(dcheck, sizeof(dcheck), "%s%s/device_name", tbt_sysfs_path, router);
 	if (is_link_nabs(vcheck) || is_link_nabs(dcheck))
 		exit(1);
 
-	snprintf(v_path, sizeof(v_path), "cat %s%s/vendor_name", tbt_sysfs_path, router);
-	vendor = do_bash_cmd(v_path);
+	snprintf(v_path, sizeof(v_path), "%s%s/vendor_name", tbt_sysfs_path, router);
+	read_line_from_file(&vendor, &v_len, v_path);
 
-	snprintf(d_path, sizeof(d_path), "cat %s%s/device_name", tbt_sysfs_path, router);
-	device = do_bash_cmd(d_path);
+	snprintf(d_path, sizeof(d_path), "%s%s/device_name", tbt_sysfs_path, router);
+	read_line_from_file(&device, &d_len, d_path);
 
 	printf("%s %s ", vendor, device);
 
