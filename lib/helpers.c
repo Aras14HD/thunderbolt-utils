@@ -12,6 +12,7 @@
  * Copyright (C) 2023 Intel Corporation
  */
 
+#include <dirent.h>
 #include <stdbool.h>
 #include <string.h>
 #include <stdlib.h>
@@ -243,22 +244,19 @@ static void get_adps_config(const char *router, struct adp_config *config)
 
 static u64 get_total_routers_in_domain(u8 domain)
 {
-	struct list_item *router, *head;
-	char path[MAX_LEN];
+	DIR* dp;
+	struct dirent* dir;
 	u64 num = 0;
 
-	snprintf(path, sizeof(path), "for line in $(ls %s); do echo $line; done",
-		 tbt_sysfs_path);
+	dp = opendir(tbt_sysfs_path);
 
-	router = do_bash_cmd_list(path);
-	head = router;
-
-	for (; router; router = router->next) {
-		if (is_router_format((char*)router->val, domain))
+	for (; dir != NULL; dir = readdir(dp)) {
+		if (is_router_format(dir->d_name, domain))
 			num++;
 	}
 
-	free_list(head);
+	closedir(dp);
+	free(dir);
 
 	return num;
 }
@@ -564,19 +562,19 @@ bool validate_args(char *domain, char *depth, const char *device)
 /* Returns 'true' if the router exists, 'false' otherwise */
 bool is_router_present(const char *router)
 {
+	DIR* dp;
 	char path[MAX_LEN];
-	char *bash;
 
-	snprintf(path, sizeof(path), "ls %s%s %s; echo $?", tbt_sysfs_path,
-		 router, REDIRECTED_NULL);
-	bash = do_bash_cmd(path);
-	if (strtoud(bash)) {
-		free(bash);
-		return false;
+	snprintf(path, sizeof(path), "%s%s", tbt_sysfs_path,
+		 router);
+	dp = opendir(path);
+	if (dp != NULL) {
+		closedir(dp);
+		return true;
 	}
 
-	free(bash);
-	return true;
+	closedir(dp);
+	return false;
 }
 
 /*

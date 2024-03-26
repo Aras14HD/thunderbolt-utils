@@ -9,6 +9,7 @@
  * Copyright (C) 2023 Intel Corporation
  */
 
+#include <dirent.h>
 #include <stdbool.h>
 #include <string.h>
 #include <stdlib.h>
@@ -139,24 +140,21 @@ static bool dump_retimer(const char *retimer)
 /* Dumps the retimers (if any) present in the provided domain */
 static bool enumerate_retimers_in_domain(u8 domain)
 {
-	struct list_item *retimer, *head;
-	char path[MAX_LEN];
+	DIR* dp;
+	struct dirent* dir;
 	bool found = false;
 
-	snprintf(path, sizeof(path), "for line in $(ls %s); do echo $line; done",
-		 tbt_sysfs_path);
+	dp = opendir(tbt_sysfs_path);
 
-	retimer = do_bash_cmd_list(path);
-	head = retimer;
-
-	for (; retimer; retimer = retimer->next) {
-		if (!is_retimer_format((char*)retimer->val, domain))
+	for (; dir != NULL; dir = readdir(dp)) {
+		if (!is_retimer_format(dir->d_name, domain))
 			continue;
 
-		found |= dump_retimer((char*)retimer->val);
+		found |= dump_retimer(dir->d_name);
 	}
 
-	free_list(head);
+	closedir(dp);
+	free(dir);
 
 	return found;
 }
@@ -164,8 +162,8 @@ static bool enumerate_retimers_in_domain(u8 domain)
 /* Dumps the retimers (if any) present on any port in the provided router */
 static bool dump_retimers_in_router(const char *router)
 {
-	struct list_item *retimer, *head;
-	char path[MAX_LEN];
+	DIR* dp;
+	struct dirent* dir;
 	bool found = false;
 	u8 domain;
 	char *str;
@@ -174,23 +172,20 @@ static bool dump_retimers_in_router(const char *router)
 	domain = strtoud(str);
 	free(str);
 
-	snprintf(path, sizeof(path), "for line in $(ls %s); do echo $line; done",
-		 tbt_sysfs_path);
+	dp = opendir(tbt_sysfs_path);
 
-	retimer = do_bash_cmd_list(path);
-	head = retimer;
-
-	for (; retimer; retimer = retimer->next) {
-		if (!is_retimer_format((char*)retimer->val, domain))
+	for (; dir != NULL; dir = readdir(dp)) {
+		if (!is_retimer_format(dir->d_name, domain))
 			continue;
 
-		if (!is_retimer_in_router((char*)retimer->val, router))
+		if (!is_retimer_in_router(dir->d_name, router))
 			continue;
 
-		found |= dump_retimer((char*)retimer->val);
+		found |= dump_retimer(dir->d_name);
 	}
 
-	free_list(head);
+	closedir(dp);
+	free(dir);
 
 	return found;
 }

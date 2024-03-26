@@ -9,6 +9,7 @@
  * Copyright (C) 2023 Intel Corporation
  */
 
+#include <dirent.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -137,27 +138,28 @@ static void dump_router(const char *router, u8 depth, bool verbose)
  */
 static bool enumerate_dev_tree(const char *router, u8 depth, bool verbose)
 {
+	DIR* dp;
+	struct dirent* dir;
 	u8 domain = domain_of_router(router);
-	struct list_item *item, *head;
 	char path[MAX_LEN];
 	bool found = false;
 
 	dump_router(router, depth, verbose);
 
-	snprintf(path, sizeof(path), "for line in $(ls %s%s); do echo $line; done",
+	snprintf(path, sizeof(path), "%s%s",
 		 tbt_sysfs_path, router);
 
-	item = do_bash_cmd_list(path);
-	head = item;
+	dp = opendir(path);
 
-	for (; item != NULL; item = item->next) {
-		if (!is_router_format((char*)item->val, domain))
+	for (; dir != NULL; dir = readdir(dp)) {
+		if (!is_router_format(dir->d_name, domain))
 			continue;
 
-		found |= enumerate_dev_tree((char*)item->val, depth + 1, verbose);
+		found |= enumerate_dev_tree(dir->d_name, depth + 1, verbose);
 	}
 
-	free_list(head);
+	closedir(dp);
+	free(dir);
 
 	return true;
 }
@@ -170,40 +172,37 @@ static bool enumerate_dev_tree(const char *router, u8 depth, bool verbose)
  */
 static bool enumerate_domain_tree(u8 domain, char *depth, bool verbose)
 {
-	struct list_item *router, *head;
-	char path[MAX_LEN];
+	DIR* dp;
+	struct dirent* dir;
 	bool found = false;
 
-	snprintf(path, sizeof(path), "for line in $(ls %s); do echo $line; done",
-		 tbt_sysfs_path);
-
-	router = do_bash_cmd_list(path);
-	head = router;
+	dp = opendir(tbt_sysfs_path);
 
 	if (depth) {
-		for(; router != NULL; router = router->next) {
-			if (!is_router_format((char*)router->val, domain))
+		for(; dir != NULL; dir = readdir(dp)) {
+			if (!is_router_format(dir->d_name, domain))
 				continue;
 
-			if (is_router_depth((char*)router->val, strtoud(depth)))
-				found |= enumerate_dev_tree((char*)router->val, 0,
+			if (is_router_depth(dir->d_name, strtoud(depth)))
+				found |= enumerate_dev_tree(dir->d_name, 0,
 							    verbose);
 		}
 	} else {
-		for(; router != NULL; router = router->next) {
-			if (!is_router_format((char*)router->val, domain))
+		for(; dir != NULL; dir = readdir(dp)) {
+			if (!is_router_format(dir->d_name, domain))
 				continue;
 
-			if (is_host_router((char*)router->val) &&
-			    is_router_domain((char*)router->val, domain)) {
-				found |= enumerate_dev_tree((char*)router->val, 0,
+			if (is_host_router(dir->d_name) &&
+			    is_router_domain(dir->d_name, domain)) {
+				found |= enumerate_dev_tree(dir->d_name, 0,
 							    verbose);
 				break;
 			}
 		}
 	}
 
-	free_list(head);
+	closedir(dp);
+	free(dir);
 
 	return found;
 }

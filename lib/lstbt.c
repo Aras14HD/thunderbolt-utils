@@ -11,6 +11,7 @@
  * Copyright (C) 2023 Intel Corporation
  */
 
+#include <dirent.h>
 #include <stdbool.h>
 #include <string.h>
 #include <stdlib.h>
@@ -83,34 +84,31 @@ static bool dump_router(const char *router)
  */
 static bool enumerate_domain(u8 domain, char *depth)
 {
-	struct list_item *router, *head;
-	char path[MAX_LEN];
+	DIR* dp;
+	struct dirent* dir;
 	bool found = false;
 
-	snprintf(path, sizeof(path), "for line in $(ls %s); do echo $line; done",
-		 tbt_sysfs_path);
-
-	router = do_bash_cmd_list(path);
-	head = router;
+	dp = opendir(tbt_sysfs_path);
 
 	if (depth) {
-		for(; router != NULL; router = router->next) {
-			if (!is_router_format((char*)router->val, domain))
+		for(; dir != NULL; dir = readdir(dp)) {
+			if (!is_router_format(dir->d_name, domain))
 				continue;
 
-			if (is_router_depth((char*)router->val, strtoud(depth)))
-				found |= dump_router((char*)router->val);
+			if (is_router_depth(dir->d_name, strtoud(depth)))
+				found |= dump_router(dir->d_name);
 		}
 	} else {
-		for(; router != NULL; router = router->next) {
-			if (!is_router_format((char*)router->val, domain))
+		for(; dir != NULL; dir = readdir(dp)) {
+			if (!is_router_format(dir->d_name, domain))
 				continue;
 
-			found |= dump_router((char*)router->val);
+			found |= dump_router(dir->d_name);
 		}
 	}
 
-	free_list(head);
+	closedir(dp);
+	free(dir);
 
 	return found;
 }

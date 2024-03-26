@@ -11,6 +11,7 @@
  * Copyright (C) 2023 Intel Corporation
  */
 
+#include <dirent.h>
 #include <sys/ioctl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -230,29 +231,28 @@ bool check_vfio_module(void)
  */
 struct pci_vdid* bind_grp_modules(const char *pci_id)
 {
-	struct list_item *list_modules, *head;
 	struct pci_vdid *dev_list;
+	DIR* dp;
+	struct dirent* dir;
 	char path[MAX_LEN];
 	u64 i = 0;
+	int n;
 
-	snprintf(path, sizeof(path), "for line in $(ls %s%s/iommu_group/devices); do echo $line; done",
+	
+	
+	snprintf(path, sizeof(path), "%s%s/iommu_group/devices)",
 		 pci_dev_sysfs_path, pci_id);
 
-	list_modules = do_bash_cmd_list(path);
-	head = list_modules;
-
-	dev_list = malloc(get_total_list_items(list_modules) * sizeof(struct pci_vdid));
-
-	for (; list_modules != NULL; list_modules = list_modules->next) {
-		dev_list[i].pci_id = malloc(MAX_LEN * sizeof(char));
-		strcpy(dev_list[i].pci_id, (char*)list_modules->val);
-
-		dev_list[i].vdid = get_vdid(list_modules->val);
-
-		bind_vfio_module((char*)list_modules->val, dev_list[i++].vdid);
-	}
-
-	free_list(head);
+	n = count_files_in_dir_with("", path);
+	dp = opendir(path);
+	dev_list = malloc(n * sizeof(struct pci_vdid));
+	do {
+		dir = readdir(dp);
+		dev_list[i].pci_id = malloc(256*sizeof(char));
+		strcpy(dev_list[i].pci_id, dir->d_name); 
+		dev_list[i].vdid = get_vdid(dir->d_name);
+		bind_vfio_module(dir->d_name, dev_list[i++].vdid);
+	 } while (dir != NULL);
 
 	return dev_list;
 }

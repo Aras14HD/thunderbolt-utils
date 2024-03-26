@@ -9,6 +9,7 @@
  * Copyright (C) 2023 Intel Corporation
  */
 
+#include <dirent.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -1799,34 +1800,33 @@ static bool dump_router_verbose(char *router, u8 num)
 
 static bool dump_domain_verbose(u8 domain, char *depth, u8 num)
 {
-	struct list_item *router, *head;
+	DIR* dp;
+	struct dirent* dir;
 	char path[MAX_LEN];
 	bool found = false;
 
-	snprintf(path, sizeof(path), "for line in $(ls %s); do echo $line; done",
-		 tbt_sysfs_path);
+	dp = opendir(tbt_sysfs_path);
 
-	router = do_bash_cmd_list(path);
-	head = router;
 
 	if (depth) {
-		for(; router != NULL; router = router->next) {
-			if (!is_router_format((char*)router->val, domain))
+		for(; dir != NULL; dir = readdir(dp)) {
+			if (!is_router_format(dir->d_name, domain))
 				continue;
 
-			if (is_router_depth((char*)router->val, strtoud(depth)))
-				found |= dump_router_verbose((char*)router->val, num);
+			if (is_router_depth(dir->d_name, strtoud(depth)))
+				found |= dump_router_verbose(dir->d_name, num);
 		}
 	} else {
-		for(; router != NULL; router = router->next) {
-			if (!is_router_format((char*)router->val, domain))
+		for(; dir != NULL; dir = readdir(dp)) {
+			if (!is_router_format(dir->d_name, domain))
 				continue;
 
-			found |= dump_router_verbose((char*)router->val, num);
+			found |= dump_router_verbose(dir->d_name, num);
 		}
 	}
 
-	free_list(head);
+	closedir(dp);
+	free(dir);
 
 	return found;
 }
